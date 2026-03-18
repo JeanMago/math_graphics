@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Graphics Library - Exploração Interativa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals with Teal and Indigo accents -->
+    <!-- Application Structure Plan: Sidebar navigation dashboard. Users select a module (Vectors, Transforms, etc.) to view its explanation, Python code snippet, and an interactive Canvas-based visualization of the math. This structured learning path breaks down complex 3D math into digestible, interactive 2D slices, allowing users to experiment with the core concepts of the library. -->
+    <!-- Visualization & Content Choices: Report Info -> Vectors -> Chart.js Line/Scatter -> Interactive visual of vector addition -> Shows math visually without SVG -> Chart.js; Report Info -> Transformations -> Chart.js Polygon -> Sliders to translate/rotate/scale -> Demonstrates matrix effects directly -> Chart.js; Report Info -> Bezier -> Chart.js Scatter -> t-slider -> Shows interpolation dynamically -> Chart.js. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9;
+            color: #292524;
+        }
+
+        code, pre {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 450px;
+                max-height: 500px;
+            }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(231, 229, 228, 0.5);
+        }
+        
+        .nav-item.active {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-right: 4px solid #0284c7;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col md:flex-row overflow-hidden">
+
+    <aside class="w-full md:w-72 lg:w-80 h-auto md:h-full flex flex-col border-r border-stone-200 bg-white shadow-sm z-10 flex-shrink-0">
+        <div class="p-6 border-b border-stone-200">
+            <h1 class="text-2xl font-bold tracking-tight text-stone-800">Math Graphics</h1>
+            <p class="text-sm text-stone-500 mt-1">Motor Matemático Avançado</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4" id="nav-menu"></nav>
+        <div class="p-4 bg-stone-50 border-t border-stone-200 text-xs text-stone-500 text-center">
+            Exploração Interativa de Pipeline Gráfico
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto relative bg-stone-50">
+        <div class="max-w-5xl mx-auto p-6 md:p-10 lg:p-12" id="main-content">
+        </div>
+    </main>
+
+    <script>
+        const appData = [
+            {
+                id: 'intro',
+                title: 'O que é a Biblioteca?',
+                icon: '🚀',
+                introText: 'Bem-vindo à exploração interativa da Math Graphics Library. Esta secção introduz o propósito da biblioteca e a sua arquitetura fundamental, preparando o terreno para os conceitos matemáticos interativos que se seguem.',
+                content: `
+                    <div class="space-y-6 text-lg text-stone-600 leading-relaxed">
+                        <p>É uma biblioteca desenvolvida em Python desenhada para fornecer os fundamentos matemáticos necessários para a <strong class="text-stone-800">Computação Gráfica 3D e 2D</strong>.</p>
+                        <p>Em vez de depender de bibliotecas pesadas de terceiros, este pacote implementa os cálculos lineares do zero, oferecendo total controlo e compreensão sobre como os gráficos funcionam "por debaixo do capô".</p>
+                        
+                        <h3 class="text-xl font-semibold text-stone-800 mt-8 mb-4 border-b border-stone-200 pb-2">Arquitetura Profissional</h3>
+                        <ul class="space-y-4">
+                            <li class="flex items-start"><span class="mr-3 text-teal-600">▪</span> <span><strong class="text-stone-800">Modularidade:</strong> O código está dividido em ficheiros lógicos (vectors, matrices, transformations, etc.).</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-teal-600">▪</span> <span><strong class="text-stone-800">Testabilidade:</strong> Diretório dedicado a testes para garantir que a matemática não falha.</span></li>
+                            <li class="flex items-start"><span class="mr-3 text-teal-600">▪</span> <span><strong class="text-stone-800">Distribuição:</strong> Pronta para ser instalada globalmente via pip ou partilhada no PyPI.</span></li>
+                        </ul>
+                    </div>
+                    <div class="mt-10 p-6 bg-stone-800 rounded-xl shadow-md text-stone-200">
+                        <h4 class="text-sm uppercase tracking-wider text-stone-400 mb-3 font-semibold">Estrutura de Ficheiros</h4>
+                        <pre class="text-sm"><code>math_graphics/
+├── __init__.py
+├── vectors.py
+├── matrices.py
+├── transformations.py
+├── projection.py
+└── bezier.py</code></pre>
+                    </div>
+                `,
+                hasInteractive: false
+            },
+            {
+                id: 'vectors',
+                title: 'Os Alicerces: Vetores',
+                icon: '↗️',
+                introText: 'Os vetores são a base de qualquer motor gráfico, representando posições, direções e velocidades. Nesta secção, explore como a adição de vetores funciona na prática, visualizando o resultado da soma geométrica de duas forças ou posições.',
+                content: `
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-4 text-stone-600">
+                            <p>As classes <code class="bg-stone-200 px-1 rounded text-stone-800">Vector2</code> e <code class="bg-stone-200 px-1 rounded text-stone-800">Vector3</code> são as estruturas de dados para o espaço bi e tridimensional.</p>
+                            <ul class="space-y-2 mt-4">
+                                <li><strong class="text-stone-800">dot()</strong>: Produto Escalar. Útil para calcular iluminação e ângulos.</li>
+                                <li><strong class="text-stone-800">cross()</strong>: Produto Vetorial (3D). Essencial para calcular as normais das superfícies.</li>
+                            </ul>
+                            <div class="mt-6 p-4 bg-stone-800 rounded-lg shadow-sm text-stone-200">
+                                <h4 class="text-xs uppercase text-stone-400 mb-2">Magia do Python (Dunder Methods)</h4>
+                                <pre class="text-sm"><code>v1 = Vector2(2, 3)
+v2 = Vector2(4, 1)
+v3 = v1 + v2 # Vector2(6, 4)</code></pre>
+                            </div>
+                            <div class="mt-6 p-4 bg-white border border-stone-200 rounded-lg">
+                                <h4 class="font-semibold text-stone-800 mb-2">Interação Ativa:</h4>
+                                <p class="text-sm">No gráfico ao lado, arraste os pontos azuis ou vermelhos para redefinir V1 e V2. Observe como V3 (a resultante) muda dinamicamente aplicando a regra do paralelogramo.</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-center">
+                            <div class="chart-container">
+                                <canvas id="vectorChart"></canvas>
+                            </div>
+                            <div class="flex justify-center gap-4 mt-4">
+                                <div class="flex flex-col items-center">
+                                    <label class="text-xs font-semibold text-stone-500 mb-1">V1 X</label>
+                                    <input type="range" id="v1x" min="0" max="10" value="2" class="w-24 accent-blue-500">
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <label class="text-xs font-semibold text-stone-500 mb-1">V1 Y</label>
+                                    <input type="range" id="v1y" min="0" max="10" value="6" class="w-24 accent-blue-500">
+                                </div>
+                                <div class="w-px bg-stone-200"></div>
+                                <div class="flex flex-col items-center">
+                                    <label class="text-xs font-semibold text-stone-500 mb-1">V2 X</label>
+                                    <input type="range" id="v2x" min="0" max="10" value="5" class="w-24 accent-red-500">
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <label class="text-xs font-semibold text-stone-500 mb-1">V2 Y</label>
+                                    <input type="range" id="v2y" min="0" max="10" value="2" class="w-24 accent-red-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                hasInteractive: true,
+                initFunc: 'initVectorChart'
+            },
+            {
+                id: 'transformations',
+                title: 'Motor de Transformação',
+                icon: '🔄',
+                introText: 'Para mover, redimensionar ou rodar um modelo, multiplicamos todos os seus pontos por Matrizes 4x4. Utilize os controlos abaixo para aplicar estas transformações matriciais a um objeto 2D em tempo real, visualizando o efeito direto do código.',
+                content: `
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-4 text-stone-600">
+                            <p>As matrizes não alteram os objetos ponto a ponto manualmente, elas aplicam transformações globais.</p>
+                            <ul class="space-y-2 mt-2">
+                                <li><strong class="text-stone-800">Translação:</strong> Move o objeto nos eixos.</li>
+                                <li><strong class="text-stone-800">Escala:</strong> Aumenta ou diminui o tamanho.</li>
+                                <li><strong class="text-stone-800">Rotação:</strong> Roda em torno da origem.</li>
+                            </ul>
+                            <div class="mt-4 p-4 bg-stone-800 rounded-lg shadow-sm text-stone-200">
+                                <pre class="text-xs"><code>def scale_matrix(sx, sy, sz):
+    return [
+        [sx,0,0,0],
+        [0,sy,0,0],
+        [0,0,sz,0],
+        [0,0,0,1]
+    ]</code></pre>
+                            </div>
+                            
+                            <div class="bg-stone-100 p-5 rounded-xl border border-stone-200 mt-6 space-y-4">
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold text-stone-700 mb-1">Translação X <span id="val-tx" class="text-stone-500 font-mono">0</span></label>
+                                    <input type="range" id="transX" min="-5" max="5" value="0" step="0.5" class="w-full accent-teal-600">
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold text-stone-700 mb-1">Translação Y <span id="val-ty" class="text-stone-500 font-mono">0</span></label>
+                                    <input type="range" id="transY" min="-5" max="5" value="0" step="0.5" class="w-full accent-teal-600">
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold text-stone-700 mb-1">Escala Global <span id="val-sc" class="text-stone-500 font-mono">1.0</span></label>
+                                    <input type="range" id="scaleG" min="0.5" max="3" value="1" step="0.1" class="w-full accent-teal-600">
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold text-stone-700 mb-1">Rotação (Graus) <span id="val-rot" class="text-stone-500 font-mono">0°</span></label>
+                                    <input type="range" id="rotZ" min="0" max="360" value="0" step="1" class="w-full accent-teal-600">
+                                </div>
+                                <button id="resetTransform" class="w-full py-2 bg-stone-300 hover:bg-stone-400 transition text-stone-800 font-semibold rounded mt-2">Repor Origem</button>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex justify-center items-center">
+                            <div class="chart-container">
+                                <canvas id="transformChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                hasInteractive: true,
+                initFunc: 'initTransformChart'
+            },
+            {
+                id: 'camera',
+                title: 'A Câmara Virtual',
+                icon: '🎥',
+                introText: 'Como representamos um mundo 3D num ecrã 2D? Através da Projeção de Perspetiva. Esta secção explica a matemática por detrás da ilusão de profundidade utilizada na biblioteca.',
+                content: `
+                    <div class="max-w-3xl space-y-6 text-stone-600">
+                        <p>A função <code class="bg-stone-200 px-1 rounded text-stone-800">perspective_projection</code> cria uma matriz especial que simula o olho humano ou uma câmara virtual.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                            <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                                <h4 class="font-bold text-indigo-900 text-lg mb-2">FOV</h4>
+                                <p class="text-sm">Field of View. Define o quão "aberta" é a visão. FOVs maiores simulam lentes grandes angulares.</p>
+                            </div>
+                            <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                                <h4 class="font-bold text-blue-900 text-lg mb-2">Aspect Ratio</h4>
+                                <p class="text-sm">Adapta a visão ao formato do ecrã (ex: 16:9), impedindo que a imagem pareça esmagada ou esticada.</p>
+                            </div>
+                            <div class="p-4 bg-sky-50 border border-sky-100 rounded-lg">
+                                <h4 class="font-bold text-sky-900 text-lg mb-2">Clipping</h4>
+                                <p class="text-sm">Planos <em>Near</em> e <em>Far</em>. Objetos fora destes limites não são desenhados, poupando processamento.</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 p-6 bg-stone-800 rounded-xl shadow-md text-stone-200 overflow-x-auto">
+                            <pre class="text-sm"><code>def perspective_projection(fov, aspect, near, far):
+    import math
+    f = 1 / math.tan(math.radians(fov)/2)
+    return [
+        [f/aspect, 0, 0, 0],
+        [0, f, 0, 0],
+        [0, 0, (far+near)/(near-far), (2*far*near)/(near-far)],
+        [0, 0, -1, 0]
+    ]</code></pre>
+                        </div>
+                        <p class="mt-4 italic text-sm text-stone-500">O resultado principal desta matriz é dividir as coordenadas X e Y pela profundidade Z, fazendo com que objetos mais distantes se tornem mais pequenos no ecrã.</p>
+                    </div>
+                `,
+                hasInteractive: false
+            },
+            {
+                id: 'bezier',
+                title: 'Curvas e Suavidade',
+                icon: '〰️',
+                introText: 'Nem tudo na computação gráfica são linhas retas. As curvas de Bézier são usadas para modelação de superfícies suaves e animações. Interaja com a variável temporal "t" para ver como a matemática polinomial interpola perfeitamente entre os pontos de controlo.',
+                content: `
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-4 text-stone-600">
+                            <p>A função <code class="bg-stone-200 px-1 rounded text-stone-800">bezier_curve</code> recebe 4 pontos de controlo. Ao variar o valor de <strong class="text-stone-800">t</strong> de 0.0 (início) a 1.0 (fim), a função combina os vetores usando a fórmula polinomial matemática para gerar uma trajetória perfeitamente suave.</p>
+                            
+                            <div class="mt-4 p-4 bg-stone-800 rounded-lg shadow-sm text-stone-200">
+                                <h4 class="text-xs uppercase text-stone-400 mb-2">A Fórmula Cúbica</h4>
+                                <pre class="text-sm"><code>def bezier_curve(p0, p1, p2, p3, t):
+    return (
+        (1-t)**3 * p0 +
+        3*(1-t)**2*t * p1 +
+        3*(1-t)*t**2 * p2 +
+        t**3 * p3
+    )</code></pre>
+                            </div>
+                            
+                            <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-100 mt-6 flex flex-col justify-center">
+                                <label class="flex justify-between font-bold text-indigo-900 mb-2">Variável Tempo (t) <span id="val-t" class="bg-indigo-200 px-2 rounded">0.50</span></label>
+                                <input type="range" id="timeT" min="0" max="1" value="0.5" step="0.01" class="w-full accent-indigo-600 cursor-pointer h-2 bg-indigo-200 rounded-lg appearance-none">
+                                <p class="text-xs text-indigo-700 mt-4 text-center">Arraste para percorrer o caminho da curva gerada matematicamente a partir dos 4 pontos âncora.</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+                            <div class="chart-container">
+                                <canvas id="bezierChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                hasInteractive: true,
+                initFunc: 'initBezierChart'
+            },
+            {
+                id: 'conclusion',
+                title: 'Conclusão (Pipeline)',
+                icon: '🏁',
+                introText: 'Resumo estrutural do fluxo de dados dentro do motor gráfico, demonstrando como as peças abordadas nas secções anteriores se unem para renderizar um objeto.',
+                content: `
+                    <div class="space-y-6 text-stone-600 max-w-3xl">
+                        <p class="text-xl font-light text-stone-800 mb-8">A <strong>Math Graphics Library</strong> constrói o pipeline gráfico clássico passo a passo. Um código limpo, extensível e pronto para ser o motor de um pequeno jogo ou simulador gráfico.</p>
+                        
+                        <div class="relative pl-8 border-l-2 border-teal-500 space-y-10 py-4">
+                            <div class="relative">
+                                <div class="absolute -left-[41px] bg-teal-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold border-4 border-stone-50">1</div>
+                                <h3 class="text-lg font-bold text-stone-800 mb-2">Vetores (Geometria Base)</h3>
+                                <p>Tudo começa com a definição das posições e formas no espaço 3D usando as estruturas vetoriais.</p>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute -left-[41px] bg-teal-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold border-4 border-stone-50">2</div>
+                                <h3 class="text-lg font-bold text-stone-800 mb-2">Transformações Matriciais</h3>
+                                <p>Mover, rodar e escalar a geometria aplicando operações matriciais complexas representadas de forma elegante.</p>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute -left-[41px] bg-teal-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold border-4 border-stone-50">3</div>
+                                <h3 class="text-lg font-bold text-stone-800 mb-2">Projeção na Tela</h3>
+                                <p>O motor matemático simula o comportamento da luz e da perspetiva, convertendo o volume 3D para as coordenadas planas do ecrã 2D.</p>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                hasInteractive: false
+            }
+        ];
+
+        let activeCharts = {};
+
+        function initApp() {
+            renderNav();
+            loadSection('intro');
+        }
+
+        function renderNav() {
+            const navMenu = document.getElementById('nav-menu');
+            navMenu.innerHTML = '';
+            appData.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'nav-item w-full text-left px-6 py-3 text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition flex items-center gap-3 border-l-4 border-transparent';
+                btn.onclick = () => loadSection(item.id);
+                btn.innerHTML = `<span class="text-lg">${item.icon}</span> <span>${item.title}</span>`;
+                btn.dataset.id = item.id;
+                navMenu.appendChild(btn);
+            });
+        }
+
+        function loadSection(id) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active', 'border-sky-600');
+                if (el.dataset.id === id) {
+                    el.classList.add('active');
+                }
+            });
+
+            const data = appData.find(d => d.id === id);
+            const contentArea = document.getElementById('main-content');
+            
+            Object.values(activeCharts).forEach(chart => chart.destroy());
+            activeCharts = {};
+
+            contentArea.innerHTML = `
+                <div class="mb-8 animate-[fadeIn_0.5s_ease-out]">
+                    <div class="inline-flex items-center justify-center p-3 bg-white border border-stone-200 rounded-2xl shadow-sm mb-6 text-3xl">
+                        ${data.icon}
+                    </div>
+                    <h2 class="text-3xl md:text-4xl font-bold text-stone-900 mb-4 tracking-tight">${data.title}</h2>
+                    <p class="text-lg text-stone-500 font-light border-l-4 border-stone-300 pl-4 py-1">${data.introText}</p>
+                </div>
+                <div class="animate-[fadeIn_0.7s_ease-out]">
+                    ${data.content}
+                </div>
+            `;
+
+            if (data.hasInteractive && window[data.initFunc]) {
+                setTimeout(() => window[data.initFunc](), 50);
+            }
+        }
+
+        function initVectorChart() {
+            const ctx = document.getElementById('vectorChart').getContext('2d');
+            
+            let v1 = {x: 2, y: 6};
+            let v2 = {x: 5, y: 2};
+
+            const generateData = () => {
+                const v3 = {x: v1.x + v2.x, y: v1.y + v2.y};
+                return {
+                    datasets: [
+                        {
+                            label: 'V1 (Vetor Base 1)',
+                            data: [{x: 0, y: 0}, {x: v1.x, y: v1.y}],
+                            borderColor: '#3b82f6',
+                            backgroundColor: '#3b82f6',
+                            borderWidth: 3,
+                            showLine: true,
+                            pointRadius: [0, 6],
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'V2 (Vetor Base 2)',
+                            data: [{x: 0, y: 0}, {x: v2.x, y: v2.y}],
+                            borderColor: '#ef4444',
+                            backgroundColor: '#ef4444',
+                            borderWidth: 3,
+                            showLine: true,
+                            pointRadius: [0, 6],
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'Projeção Paralela',
+                            data: [{x: v1.x, y: v1.y}, {x: v3.x, y: v3.y}, {x: v2.x, y: v2.y}],
+                            borderColor: '#d6d3d1',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            showLine: true,
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'V3 = V1 + V2',
+                            data: [{x: 0, y: 0}, {x: v3.x, y: v3.y}],
+                            borderColor: '#10b981',
+                            backgroundColor: '#10b981',
+                            borderWidth: 4,
+                            showLine: true,
+                            pointRadius: [0, 8],
+                            pointStyle: 'rectRot'
+                        }
+                    ]
+                };
+            };
+
+            const chart = new Chart(ctx, {
+                type: 'scatter',
+                data: generateData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { min: 0, max: 12, grid: { color: '#f5f5f4' } },
+                        y: { min: 0, max: 12, grid: { color: '#f5f5f4' } }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+
+            activeCharts['vectors'] = chart;
+
+            const updatePlot = () => {
+                v1.x = parseFloat(document.getElementById('v1x').value);
+                v1.y = parseFloat(document.getElementById('v1y').value);
+                v2.x = parseFloat(document.getElementById('v2x').value);
+                v2.y = parseFloat(document.getElementById('v2y').value);
+                chart.data = generateData();
+                chart.update();
+            };
+
+            ['v1x', 'v1y', 'v2x', 'v2y'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePlot);
+            });
+        }
+
+        function initTransformChart() {
+            const ctx = document.getElementById('transformChart').getContext('2d');
+            
+            const baseObj = [
+                {x: -1, y: -1},
+                {x: 1, y: -1},
+                {x: 1, y: 1},
+                {x: -1, y: 1},
+                {x: -1, y: -1}
+            ];
+
+            let tx = 0, ty = 0, scale = 1, angle = 0;
+
+            const generateData = () => {
+                const rad = angle * (Math.PI / 180);
+                const cosA = Math.cos(rad);
+                const sinA = Math.sin(rad);
+
+                const transformed = baseObj.map(p => {
+                    let sX = p.x * scale;
+                    let sY = p.y * scale;
+                    
+                    let rX = sX * cosA - sY * sinA;
+                    let rY = sX * sinA + sY * cosA;
+
+                    let tX = rX + tx;
+                    let tY = rY + ty;
+
+                    return {x: tX, y: tY};
+                });
+
+                return {
+                    datasets: [
+                        {
+                            label: 'Origem',
+                            data: [{x: 0, y: 0}],
+                            backgroundColor: '#d6d3d1',
+                            pointRadius: 4,
+                            pointStyle: 'crossRot'
+                        },
+                        {
+                            label: 'Geometria Transformada',
+                            data: transformed,
+                            borderColor: '#0f766e',
+                            backgroundColor: 'rgba(13, 148, 136, 0.2)',
+                            borderWidth: 2,
+                            showLine: true,
+                            fill: true,
+                            pointRadius: 3
+                        }
+                    ]
+                };
+            };
+
+            const chart = new Chart(ctx, {
+                type: 'scatter',
+                data: generateData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { min: -8, max: 8, grid: { color: (c) => c.tick.value === 0 ? '#a8a29e' : '#f5f5f4', lineWidth: (c) => c.tick.value === 0 ? 2 : 1 } },
+                        y: { min: -8, max: 8, grid: { color: (c) => c.tick.value === 0 ? '#a8a29e' : '#f5f5f4', lineWidth: (c) => c.tick.value === 0 ? 2 : 1 } }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+
+            activeCharts['transforms'] = chart;
+
+            const updatePlot = () => {
+                tx = parseFloat(document.getElementById('transX').value);
+                ty = parseFloat(document.getElementById('transY').value);
+                scale = parseFloat(document.getElementById('scaleG').value);
+                angle = parseFloat(document.getElementById('rotZ').value);
+                
+                document.getElementById('val-tx').innerText = tx;
+                document.getElementById('val-ty').innerText = ty;
+                document.getElementById('val-sc').innerText = scale.toFixed(1);
+                document.getElementById('val-rot').innerText = angle + '°';
+
+                chart.data = generateData();
+                chart.update();
+            };
+
+            ['transX', 'transY', 'scaleG', 'rotZ'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePlot);
+            });
+
+            document.getElementById('resetTransform').addEventListener('click', () => {
+                document.getElementById('transX').value = 0;
+                document.getElementById('transY').value = 0;
+                document.getElementById('scaleG').value = 1;
+                document.getElementById('rotZ').value = 0;
+                updatePlot();
+            });
+        }
+
+        function initBezierChart() {
+            const ctx = document.getElementById('bezierChart').getContext('2d');
+            
+            const p0 = {x: 0, y: 0};
+            const p1 = {x: 2, y: 8};
+            const p2 = {x: 8, y: 8};
+            const p3 = {x: 10, y: 0};
+
+            const bezierCalc = (t) => {
+                const mt = 1 - t;
+                return {
+                    x: Math.pow(mt, 3) * p0.x + 3 * Math.pow(mt, 2) * t * p1.x + 3 * mt * Math.pow(t, 2) * p2.x + Math.pow(t, 3) * p3.x,
+                    y: Math.pow(mt, 3) * p0.y + 3 * Math.pow(mt, 2) * t * p1.y + 3 * mt * Math.pow(t, 2) * p2.y + Math.pow(t, 3) * p3.y
+                };
+            };
+
+            const curvePoints = [];
+            for (let i = 0; i <= 1; i += 0.02) {
+                curvePoints.push(bezierCalc(i));
+            }
+
+            let currentT = 0.5;
+
+            const generateData = () => {
+                const pt = bezierCalc(currentT);
+                return {
+                    datasets: [
+                        {
+                            label: 'Curva Completa',
+                            data: curvePoints,
+                            borderColor: '#a5b4fc',
+                            borderWidth: 3,
+                            showLine: true,
+                            pointRadius: 0,
+                            tension: 0.1 
+                        },
+                        {
+                            label: 'Pontos de Controlo',
+                            data: [p0, p1, p2, p3],
+                            backgroundColor: '#6366f1',
+                            borderColor: '#e0e7ff',
+                            borderWidth: 2,
+                            showLine: true,
+                            borderDash: [5, 5],
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'Ponto P(t)',
+                            data: [pt],
+                            backgroundColor: '#4338ca',
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            pointRadius: 10,
+                            pointStyle: 'circle'
+                        }
+                    ]
+                };
+            };
+
+            const chart = new Chart(ctx, {
+                type: 'scatter',
+                data: generateData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { min: -1, max: 11, grid: { color: '#f5f5f4' } },
+                        y: { min: -1, max: 10, grid: { color: '#f5f5f4' } }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+
+            activeCharts['bezier'] = chart;
+
+            document.getElementById('timeT').addEventListener('input', (e) => {
+                currentT = parseFloat(e.target.value);
+                document.getElementById('val-t').innerText = currentT.toFixed(2);
+                chart.data = generateData();
+                chart.update();
+            });
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
